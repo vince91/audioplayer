@@ -11,4 +11,30 @@
 
 #include <iostream>
 
+extern "C" {
+#include <libavformat/avformat.h>
+}
+
+class AudioFile
+{
+public:
+    AudioFile(std::string _filename);
+    
+private:
+    std::string filename;
+    bool init();
+    bool openCodecContext();
+    
+    AVFormatContext *formatContext = NULL;
+    AVCodecContext *codecContext = NULL;
+    AVPacket packet;
+    AVFrame *frame = NULL;
+    AVStream *stream = NULL;
+    int streamIndex = -1;
+    
+    
+    
+    
+};
+
 #endif /* defined(__audioplayer__audiofile__) */

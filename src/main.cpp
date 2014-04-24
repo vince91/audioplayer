@@ -7,12 +7,15 @@
 //
 
 #include <iostream>
+#include "audioplayer.h"
 
 int main(int argc, const char * argv[])
 {
-
-    // insert code here...
-    std::cout << "Hello, World!\n";
+    AudioPlayer player;
+    
+    player.addToPlaylist("/Users/vincent/Music/AVRIL HOUSE/DJ Assassin - A Face In The Crowd (Intellidread Mix).mp3");
+    player.play();
+    
     return 0;
 }
 

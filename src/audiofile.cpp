@@ -6,16 +6,24 @@
 //  Copyright (c) 2014 Vincent Timofti. All rights reserved.
 //
 
+#include <portaudio.h>
 #include "audiofile.h"
+#define SHORT_MAX 32768.
 
 
 AudioFile::AudioFile(std::string _filename) : filename(_filename)
 {
     av_register_all();
-    init();
 }
 
-bool AudioFile::init()
+AudioFile::~AudioFile()
+{
+    avcodec_close(codecContext);
+    avformat_close_input(&formatContext);
+    av_frame_free(&frame);
+}
+
+bool AudioFile::initialize()
 {
     /* open input file, and allocate format context */
     if (avformat_open_input(&formatContext, filename.c_str(), NULL, NULL) < 0) {
@@ -36,8 +44,12 @@ bool AudioFile::init()
     }
     
     /* dump file info to stderr */
-    av_dump_format(formatContext, 0, filename.c_str(), 0);
+    //av_dump_format(formatContext, 0, filename.c_str(), 0);
     
+    sampleFormat = formatContext->streams[streamIndex]->codec->sample_fmt;
+    
+    if (codecContext->channels == 2)
+        stereo = true;
     
     frame = av_frame_alloc();
     if (!frame) {
@@ -49,8 +61,9 @@ bool AudioFile::init()
     packet.data = NULL;
     packet.size = 0;
     
-    return true;
+    fillBuffer();
     
+    return true;
 }
 
 bool AudioFile::openCodecContext()
@@ -82,4 +95,98 @@ bool AudioFile::openCodecContext()
     }
     
     return true;
+}
+
+int AudioFile::decodePacket()
+{
+    int ret = 0;
+    int decoded = packet.size;
+    gotFrame = 0;
+    
+    /* decode audio frame */
+    ret = avcodec_decode_audio4(codecContext, frame, &gotFrame, &packet);
+    
+    if (ret < 0) {
+        fprintf(stderr, "Error decoding audio frame (%s)\n", av_err2str(ret));
+        return ret;
+    }
+    
+    decoded = FFMIN(ret, packet.size);
+    
+    if (gotFrame) {
+        
+        for (int i = 0; i < frame->nb_samples; ++i) {
+            if(sampleFormat == AV_SAMPLE_FMT_S16P) {
+                firstChannel[writePos] = (short) (frame->extended_data[0][2 * i] | frame->extended_data[0][2 * i + 1] << 8) / SHORT_MAX;
+                
+                if (stereo)
+                    secondChannel[writePos] = (short) (frame->extended_data[1][2 * i] | frame->extended_data[1][2 * i + 1] << 8) / SHORT_MAX;
+
+                if(++writePos == 3*BUFFER_SIZE)
+                    writePos = 0;
+                
+            }
+            
+        }
+        
+    }
+    
+    return decoded;
+    
+}
+
+bool AudioFile::fillBuffer()
+{
+    int lenght;
+    int count = 0;
+    
+    /* read frames from the file */
+    while (count < BUFFER_SIZE && av_read_frame(formatContext, &packet) >= 0) {
+        AVPacket orig_pkt = packet;
+        do {
+            lenght = decodePacket();
+            count += frame->nb_samples;
+            packet.data += lenght;
+            packet.size -= lenght;
+        } while (packet.size > 0 && lenght >= 0);
+        av_free_packet(&orig_pkt);
+    }
+    
+    if (count < BUFFER_SIZE) {
+        /* flush cached frames */
+        packet.data = NULL;
+        packet.size = 0;
+        do {
+            decodePacket();
+            count +=  frame->nb_samples;
+        } while (gotFrame && count < BUFFER_SIZE);
+    }
+    
+    total += count;
+    
+    bool ret = (count >= BUFFER_SIZE);
+    
+    if (!ret)
+        lastIndex = writePos;
+    
+    return ret; /* returns false when entire audio file has been read */
+}
+
+void AudioFile::threadFillBuffer()
+{
+    /* fill circular buffer so portaudio as always enough data to process */
+    
+    while (lastIndex == -1) {
+        if (writePos > readPos) {
+            if ((writePos - readPos - 1) < BUFFER_SIZE)
+                fillBuffer();
+        }
+        else {
+            if ((writePos + 3*BUFFER_SIZE - readPos) < BUFFER_SIZE)
+                fillBuffer();
+        }
+        
+        Pa_Sleep(10);
+    }
+    
 }

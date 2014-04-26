@@ -13,8 +13,8 @@ int main(int argc, const char * argv[])
 {
     AudioPlayer player;
     
-    player.addToPlaylist("/Users/vincent/Music/AVRIL HOUSE/DJ Assassin - A Face In The Crowd (Intellidread Mix).mp3");
-    player.play();
+    //player.loadAndPlay("/Users/vincent/Music/AVRIL HOUSE/Mind Against - Atlant (Original Mix) [exclusive-music-dj.com].mp3");
+    player.loadAndPlay("/Users/vincent/Music/test.mp3");
     
     return 0;
 }

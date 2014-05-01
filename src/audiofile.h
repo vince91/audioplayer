@@ -29,6 +29,7 @@ public:
     const int * getLastIndex() const { return &lastIndex; }
     
     bool initialize();
+    void stopThread() { lastIndex = 0; }
     
     int total = 0;
     
@@ -51,8 +52,6 @@ private:
     float firstChannel[3*BUFFER_SIZE];
     float secondChannel[3*BUFFER_SIZE];
 
-
-    
     AVFormatContext *formatContext = NULL;
     AVCodecContext *codecContext = NULL;
     AVPacket packet;

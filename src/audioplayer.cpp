@@ -8,22 +8,14 @@
 
 #include "audioplayer.h"
 #include "audiofile.h"
+#include "mainwindow.h"
 #include <portaudio.h>
 #include <thread>
 
-typedef struct
-{
-    const float *firstChannel;
-    const float *secondChannel;
-    int *readPos;
-    const int *lastIndex;
-    AudioPlayer *player;
-}
-paData;
 
 static paData playerData;
 
-AudioPlayer::AudioPlayer()
+AudioPlayer::AudioPlayer(MainWindow *_parent) : parent(_parent)
 {
     PaError err = Pa_Initialize();
     if (err != paNoError) {
@@ -65,10 +57,10 @@ bool AudioPlayer::loadAndPlay(std::string filename)
     playerData.readPos = audio->getReadPosition();
     playerData.lastIndex = audio->getLastIndex();
     
+    Pa_StopStream(stream);
     
     PaError err;
-    
-    err = Pa_StartStream( stream );
+    err = Pa_StartStream(stream);
     
     bufferThread = new std::thread(&AudioFile::threadFillBuffer, audio);
     
@@ -77,29 +69,54 @@ bool AudioPlayer::loadAndPlay(std::string filename)
         return false;
     }
     
-    
-    while(1) {
-        Pa_Sleep(10);
-    }
+    playing = true;
+    parent->updateButton();
     
     return true;
 }
 
-void AudioPlayer::stop() {
-    
-    PaError err;
-    
-    err = Pa_StopStream(stream);
-    if(err != paNoError) {
-        std::cerr << "PortAudio error: " << Pa_GetErrorText( err ) << std::endl;
+void AudioPlayer::pause()
+{
+    if (paused) {
+        paused = false;
+        PaError err;
+        err = Pa_StartStream( stream );
+        if (err != paNoError) {
+            std::cerr << "PortAudio error: " << Pa_GetErrorText( err ) << std::endl;
+        }
+        
+    }
+    else {
+        Pa_AbortStream(stream);
+        paused = true;
     }
     
+    parent->updateButton();
+    
+}
+
+void AudioPlayer::stop(bool callback) {
+    
+    std::cout << "stop" << std::endl;
+    
+    playing = false; paused = false;
+    parent->updateButton();
+    
+    if (audio == nullptr)
+        return;
+
+    if(!callback)
+        Pa_StopStream(stream);
+    
+    audio->stopThread();
     if (bufferThread != nullptr) {
         if (bufferThread->joinable()) {
             bufferThread->join();
             delete bufferThread;
         }
     }
+    
+    delete audio; audio = nullptr;
 }
 
 void AudioPlayer::addToPlaylist(std::string filename)
@@ -114,14 +131,16 @@ int AudioPlayer::patestCallback(const void *inputBuffer, void *outputBuffer, uns
     paData *data = (paData*) userData;
     int *readPos = data->readPos;
     float *out = (float*)outputBuffer;
+    (void) inputBuffer; (void) timeInfo; (void) statusFlags;
     
-    for (int i = 0; i < framesPerBuffer; ++i) {
+    for (unsigned int i = 0; i < framesPerBuffer; ++i) {
         
         if (*readPos == *(data->lastIndex)) {
-            std::cout << "finished\n";
+            std::cout << "paComplete\n";
             *out++ = 0.;
             *out++ = 0.;
-            data->player->stop();
+            data->player->stop(true);
+            return paComplete;
         }
         else {
         *out++ = data->firstChannel[*readPos]; /* left channel */
@@ -133,7 +152,7 @@ int AudioPlayer::patestCallback(const void *inputBuffer, void *outputBuffer, uns
         
     }
     
-    return 0;
+    return paContinue;
 }
 
 

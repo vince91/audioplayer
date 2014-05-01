@@ -7,14 +7,24 @@
 //
 
 #include <iostream>
+#include <QApplication>
 #include "audioplayer.h"
+#include "mainwindow.h"
 
-int main(int argc, const char * argv[])
+int main(int argc, char * argv[])
 {
+    /*
     AudioPlayer player;
     
     //player.loadAndPlay("/Users/vincent/Music/AVRIL HOUSE/Mind Against - Atlant (Original Mix) [exclusive-music-dj.com].mp3");
     player.loadAndPlay("/Users/vincent/Music/test.mp3");
+    //*/
+    
+    QApplication a(argc, argv);
+    MainWindow w;
+    w.show();
+    
+    return a.exec();
     
     return 0;
 }

@@ -8,6 +8,7 @@
 
 #include <portaudio.h>
 #include "audiofile.h"
+
 #define SHORT_MAX 32768.
 
 
@@ -174,8 +175,7 @@ bool AudioFile::fillBuffer()
 
 void AudioFile::threadFillBuffer()
 {
-    /* fill circular buffer so portaudio as always enough data to process */
-    
+    /* constantly fill circular buffer so portaudio has always enough data to process */
     while (lastIndex == -1) {
         if (writePos > readPos) {
             if ((writePos - readPos - 1) < BUFFER_SIZE)
@@ -185,8 +185,6 @@ void AudioFile::threadFillBuffer()
             if ((writePos + 3*BUFFER_SIZE - readPos) < BUFFER_SIZE)
                 fillBuffer();
         }
-        
         Pa_Sleep(10);
     }
-    
 }

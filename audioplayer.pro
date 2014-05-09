@@ -11,6 +11,7 @@ INCLUDEPATH += . src
 QMAKE_CXXFLAGS += -std=c++11 -stdlib=libc++ -mmacosx-version-min=10.7
 LIBS += -L/usr/local/lib
 CONFIG += c++11
+RESOURCES = resources.qrc
 
 # Input
 HEADERS += src/audiofile.h src/audioplayer.h src/mainwindow.h

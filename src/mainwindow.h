@@ -12,6 +12,7 @@
 #include <iostream>
 #include <QMainWindow>
 #include <QPushButton>
+#include <QLabel>
 #include "audioplayer.h"
 
 class AudioPlayer;
@@ -23,11 +24,18 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
+    
     void updateButton();
+    void updateMetadata(std::string, std::string, std::string, std::string, std::string, std::string);
     
 private:
     QPushButton *playPauseButton;
     QPushButton *stopButton;
+    QLabel *albumCover;
+    QLabel *artistTitle;
+    QLabel *albumYear;
+    QLabel *duration;
+    QLabel *genre;
     AudioPlayer player;
     
 private slots:

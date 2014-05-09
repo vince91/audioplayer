@@ -30,7 +30,7 @@ public:
     bool isPaused() const { return paused; }
     
 private:
-    MainWindow *parent;
+    MainWindow *window;
     
     std::thread *bufferThread = nullptr;
     std::list<std::string> playlist;

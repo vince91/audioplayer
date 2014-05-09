@@ -17,8 +17,12 @@ extern "C" {
 #include <libavformat/avformat.h>
 }
 
+class AudioPlayer;
+
 class AudioFile
 {
+    friend class AudioPlayer;
+    
 public:
     AudioFile(std::string);
     ~AudioFile();
@@ -32,14 +36,17 @@ public:
     void stopThread() { lastIndex = 0; }
     
     int total = 0;
-    
     void threadFillBuffer();
     
-private:    
+ 
+    
+private:
     std::string filename;
     AVSampleFormat sampleFormat;
     
-    bool openCodecContext();
+    bool openAudioCodecContext();
+    bool openVideoCodecContext();
+    
     int decodePacket();
     bool fillBuffer();
     
@@ -53,11 +60,13 @@ private:
     float secondChannel[3*BUFFER_SIZE];
 
     AVFormatContext *formatContext = NULL;
-    AVCodecContext *codecContext = NULL;
+    AVCodecContext *audioCodecContext = NULL, *videoCodecContext = NULL;
     AVPacket packet;
     AVFrame *frame = NULL;
-    AVStream *stream = NULL;
-    int streamIndex = -1, gotFrame;
+    AVStream *audioStream = NULL, *videoStream = NULL;
+    int audioStreamIndex = -1, videoStreamIndex = -1, gotFrame;
+    
+    std::string artist, title, album, genre, year, duration;
     
 };
 

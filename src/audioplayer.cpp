@@ -15,7 +15,7 @@
 
 static paData playerData;
 
-AudioPlayer::AudioPlayer(MainWindow *_parent) : parent(_parent)
+AudioPlayer::AudioPlayer(MainWindow *_window) : window(_window)
 {
     PaError err = Pa_Initialize();
     if (err != paNoError) {
@@ -52,6 +52,8 @@ bool AudioPlayer::loadAndPlay(std::string filename)
         return false;
     }
     
+    window->updateMetadata(audio->title, audio->artist, audio->album, audio->year, audio->genre, audio->duration);
+    
     playerData.firstChannel = audio->getFirstChannel();
     playerData.secondChannel = audio->getSecondChannel();
     playerData.readPos = audio->getReadPosition();
@@ -70,8 +72,8 @@ bool AudioPlayer::loadAndPlay(std::string filename)
     }
     
     playing = true;
-    parent->updateButton();
-    
+    window->updateButton();
+        
     return true;
 }
 
@@ -91,16 +93,14 @@ void AudioPlayer::pause()
         paused = true;
     }
     
-    parent->updateButton();
+    window->updateButton();
     
 }
 
 void AudioPlayer::stop(bool callback) {
     
-    std::cout << "stop" << std::endl;
-    
     playing = false; paused = false;
-    parent->updateButton();
+    window->updateButton();
     
     if (audio == nullptr)
         return;
@@ -109,6 +109,7 @@ void AudioPlayer::stop(bool callback) {
         Pa_StopStream(stream);
     
     audio->stopThread();
+    
     if (bufferThread != nullptr) {
         if (bufferThread->joinable()) {
             bufferThread->join();

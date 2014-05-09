@@ -7,20 +7,20 @@
 //
 
 #include <portaudio.h>
+#include <fstream>
 #include "audiofile.h"
 
 #define SHORT_MAX 32768.
 
 
-AudioFile::AudioFile(std::string _filename) : filename(_filename)
+AudioFile::AudioFile(std::string _filename, std::string _tempFolder) : filename(_filename), tempFolder(_tempFolder)
 {
     av_register_all();
 }
 
 AudioFile::~AudioFile()
 {
-    avcodec_close(audioCodecContext);
-    avcodec_close(videoCodecContext);
+    avcodec_close(codecContext);
     avformat_close_input(&formatContext);
     av_frame_free(&frame);
 }
@@ -40,42 +40,23 @@ bool AudioFile::initialize()
     }
     
     /* open the apropriate audio codec */
-    if (!openAudioCodecContext()) {
-        std::cerr << "Could not open MP3 codec\n" << std::endl;
+    if (!openCodecContext()) {
+        std::cerr << "Could not open audio codec\n" << std::endl;
         return false;
     }
     
-    openVideoCodecContext();
     
     /* dump file info to stderr */
     av_dump_format(formatContext, 0, filename.c_str(), 0);
     
-    /* metadata */
-    AVDictionary *dictionary = formatContext->metadata; AVDictionaryEntry *tag;
-    tag = av_dict_get(dictionary, "title", NULL, AV_DICT_MATCH_CASE);
-    if (tag != NULL)
-        title = tag->value;
-    tag = av_dict_get(dictionary, "artist", NULL, AV_DICT_MATCH_CASE);
-    if (tag != NULL)
-        artist = tag->value;
-    tag = av_dict_get(dictionary, "album", NULL, AV_DICT_MATCH_CASE);
-    if (tag != NULL)
-        album = tag->value;
-    tag = av_dict_get(dictionary, "date", NULL, AV_DICT_MATCH_CASE);
-    if (tag != NULL)
-        year = tag->value;
-    tag = av_dict_get(dictionary, "genre", NULL, AV_DICT_MATCH_CASE);
-    if (tag != NULL)
-        genre = tag->value;
-    
-    int64_t d = formatContext->duration/AV_TIME_BASE;
-    duration = std::to_string(d/60) + ":" + ((d%60<10)?"0":"") + std::to_string(d%60);
-
+    /* basic informations: metadata, sample format and mono/stereo */
+    retrieveMetadata();
+    saveAlbumCover();
     sampleFormat = formatContext->streams[audioStreamIndex]->codec->sample_fmt;
-    
-    if (audioCodecContext->channels == 2)
+    if (codecContext->channels == 2)
         stereo = true;
     
+    /* audio decoding */
     frame = av_frame_alloc();
     if (!frame) {
         std::cerr << "Could not allocate frame\n";
@@ -91,7 +72,7 @@ bool AudioFile::initialize()
     return true;
 }
 
-bool AudioFile::openAudioCodecContext()
+bool AudioFile::openCodecContext()
 {
     AVCodec *codec = NULL;
     
@@ -105,8 +86,8 @@ bool AudioFile::openAudioCodecContext()
     audioStream = formatContext->streams[audioStreamIndex];
     
     /* find decoder for the stream */
-    audioCodecContext = audioStream->codec;
-    codec = avcodec_find_decoder(audioCodecContext->codec_id);
+    codecContext = audioStream->codec;
+    codec = avcodec_find_decoder(codecContext->codec_id);
     
     if (!codec) {
         std::cerr << "Failed to find audio codec\n";
@@ -114,7 +95,7 @@ bool AudioFile::openAudioCodecContext()
     }
     
     /* Init the decoders without reference counting */
-    if (avcodec_open2(audioCodecContext, codec, NULL) < 0) {
+    if (avcodec_open2(codecContext, codec, NULL) < 0) {
         std::cerr << "Failed to open audio codec\n";
         return false;
     }
@@ -122,31 +103,6 @@ bool AudioFile::openAudioCodecContext()
     return true;
 }
 
-bool AudioFile::openVideoCodecContext()
-{
-    /* video codec for the album cover */
-    AVCodec *codec = NULL;
-    
-    videoStreamIndex = av_find_best_stream(formatContext, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
-    
-    if (videoStreamIndex < 0) /* no album cover found */
-        return false;
-    
-    videoStream = formatContext->streams[videoStreamIndex];
-    
-    videoCodecContext = videoStream->codec;
-    codec = avcodec_find_decoder(videoCodecContext->codec_id);
-    
-    if (!codec)
-        return false;
-    
-    if (avcodec_open2(videoCodecContext, codec, NULL) < 0) {
-        std::cerr << "Failed to open video codec\n";
-        return false;
-    }
-    
-    return true;
-}
 
 int AudioFile::decodePacket()
 {
@@ -155,7 +111,7 @@ int AudioFile::decodePacket()
     gotFrame = 0;
     
     /* decode audio frame */
-    ret = avcodec_decode_audio4(audioCodecContext, frame, &gotFrame, &packet);
+    ret = avcodec_decode_audio4(codecContext, frame, &gotFrame, &packet);
     
     if (ret < 0) {
         fprintf(stderr, "Error decoding audio frame (%s)\n", av_err2str(ret));
@@ -172,7 +128,7 @@ int AudioFile::decodePacket()
                 
                 if (stereo)
                     secondChannel[writePos] = (short) (frame->extended_data[1][2 * i] | frame->extended_data[1][2 * i + 1] << 8) / SHORT_MAX;
-
+                
                 if(++writePos == 3*BUFFER_SIZE)
                     writePos = 0;
                 
@@ -237,4 +193,49 @@ void AudioFile::threadFillBuffer()
         }
         Pa_Sleep(10);
     }
+}
+
+void AudioFile::retrieveMetadata()
+{
+    AVDictionary *dictionary = formatContext->metadata; AVDictionaryEntry *tag;
+    tag = av_dict_get(dictionary, "title", NULL, AV_DICT_MATCH_CASE);
+    if (tag != NULL)
+        title = tag->value;
+    tag = av_dict_get(dictionary, "artist", NULL, AV_DICT_MATCH_CASE);
+    if (tag != NULL)
+        artist = tag->value;
+    tag = av_dict_get(dictionary, "album", NULL, AV_DICT_MATCH_CASE);
+    if (tag != NULL)
+        album = tag->value;
+    tag = av_dict_get(dictionary, "date", NULL, AV_DICT_MATCH_CASE);
+    if (tag != NULL)
+        year = tag->value;
+    tag = av_dict_get(dictionary, "genre", NULL, AV_DICT_MATCH_CASE);
+    if (tag != NULL)
+        genre = tag->value;
+    
+    int64_t d = formatContext->duration/AV_TIME_BASE;
+    duration = std::to_string(d/60) + ":" + ((d%60<10)?"0":"") + std::to_string(d%60);
+}
+
+void AudioFile::saveAlbumCover()
+{
+    videoStreamIndex = av_find_best_stream(formatContext, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
+    std::string file = tempFolder + "/audio_player_cover";
+
+    if (videoStreamIndex >= 0) {
+        videoStream = formatContext->streams[videoStreamIndex];
+        
+        if (videoStream != NULL) {
+            if (videoStream->disposition & AV_DISPOSITION_ATTACHED_PIC) {
+                std::ofstream outFile(file, std::ofstream::binary);
+                AVPacket pkt = videoStream->attached_pic;
+                outFile.write((char*)pkt.data, pkt.size);
+                outFile.close();
+                return;
+            }
+        }
+    }
+    
+    std::remove(file.c_str());
 }

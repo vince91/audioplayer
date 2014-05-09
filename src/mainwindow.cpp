@@ -11,9 +11,10 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QPixmap>
+#include <QDir>
 
 
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), player(this)
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), player(this, QDir::tempPath().toStdString())
 {
     setWindowTitle("Audio Player");
     
@@ -131,4 +132,13 @@ void MainWindow::updateMetadata(std::string _title, std::string _artist, std::st
     
     _duration = "<i>Duration:</i> " + _duration;
     duration->setText(QString(_duration.c_str()));
+    
+    /* album cover */
+    std::string coverFilename = QDir::tempPath().toStdString() + "/audio_player_cover";
+    if (QFile::exists(QString(coverFilename.c_str()))) {
+        QPixmap albumCoverPix(coverFilename.c_str());
+        albumCover->setPixmap(albumCoverPix.scaled(150, 150, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+    }
+    
+
 }

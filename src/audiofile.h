@@ -24,7 +24,7 @@ class AudioFile
     friend class AudioPlayer;
     
 public:
-    AudioFile(std::string);
+    AudioFile(std::string, std::string);
     ~AudioFile();
     
     const float * getFirstChannel() const { return firstChannel; }
@@ -44,29 +44,26 @@ private:
     std::string filename;
     AVSampleFormat sampleFormat;
     
-    bool openAudioCodecContext();
-    bool openVideoCodecContext();
-    
+    bool openCodecContext();
     int decodePacket();
     bool fillBuffer();
     
+    void retrieveMetadata();
+    void saveAlbumCover();
+    
     bool stereo = false;
 
-    int writePos = 0;
-    int readPos = 0;
-    int lastIndex = -1;
-    
-    float firstChannel[3*BUFFER_SIZE];
-    float secondChannel[3*BUFFER_SIZE];
+    int writePos = 0, readPos = 0, lastIndex = -1;
+    float firstChannel[3*BUFFER_SIZE], secondChannel[3*BUFFER_SIZE];
 
     AVFormatContext *formatContext = NULL;
-    AVCodecContext *audioCodecContext = NULL, *videoCodecContext = NULL;
+    AVCodecContext *codecContext = NULL;
     AVPacket packet;
     AVFrame *frame = NULL;
     AVStream *audioStream = NULL, *videoStream = NULL;
     int audioStreamIndex = -1, videoStreamIndex = -1, gotFrame;
     
-    std::string artist, title, album, genre, year, duration;
+    std::string artist, title, album, genre, year, duration, tempFolder;
     
 };
 

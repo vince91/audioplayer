@@ -20,7 +20,7 @@ class MainWindow;
 class AudioPlayer
 {
 public:
-    AudioPlayer(MainWindow *parent);
+    AudioPlayer(MainWindow *, std::string);
     void addToPlaylist(std::string);
     
     bool loadAndPlay(std::string);
@@ -34,9 +34,9 @@ private:
     
     std::thread *bufferThread = nullptr;
     std::list<std::string> playlist;
+    std::string tempFolder;
     
-    bool playing = false;
-    bool paused = false;
+    bool playing = false, paused = false;
     
     PaStream *stream;
     

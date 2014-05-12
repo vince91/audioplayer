@@ -18,6 +18,7 @@ extern "C" {
 }
 
 class AudioPlayer;
+class Waveform;
 
 class AudioFile
 {
@@ -44,12 +45,15 @@ private:
     std::string filename;
     AVSampleFormat sampleFormat;
     
-    bool openCodecContext();
+    bool openCodecContext(AVFormatContext*, int &streamIndex, AVStream * &stream, AVCodecContext * &cdcContext);
     int decodePacket();
+    int waveformDecodePacket();
     bool fillBuffer();
     
     void retrieveMetadata();
     void saveAlbumCover();
+    bool createWaveform();
+    
     
     bool stereo = false;
 
@@ -63,7 +67,20 @@ private:
     AVStream *audioStream = NULL, *videoStream = NULL;
     int audioStreamIndex = -1, videoStreamIndex = -1, gotFrame;
     
+    /* waveframe related variables */
+    AVFormatContext *waveformFormatContext = NULL;
+    AVCodecContext *waveformCodecContext = NULL;
+    AVFrame *waveformFrame = NULL;
+    AVPacket waveformPacket;
+    int waveformGotFrame;
+    
     std::string artist, title, album, genre, year, duration, tempFolder;
+    
+    Waveform *waveform;
+    float *waveformBuffer; unsigned int wfReadPos = 0, wfWritePos = 0, samplesPerChunk;
+    float RMS(bool);
+    
+    long int completed = 0;
     
 };
 

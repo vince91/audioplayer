@@ -14,8 +14,8 @@ CONFIG += c++11
 RESOURCES = resources.qrc
 
 # Input
-HEADERS += src/audiofile.h src/audioplayer.h src/mainwindow.h
-SOURCES += src/audiofile.cpp src/audioplayer.cpp src/mainwindow.cpp src/main.cpp
+HEADERS += src/waveform.h src/audiofile.h src/audioplayer.h src/mainwindow.h
+SOURCES += src/waveform.cpp src/audiofile.cpp src/audioplayer.cpp src/mainwindow.cpp src/main.cpp
 
 macx {
     INCLUDEPATH += /usr/local/include

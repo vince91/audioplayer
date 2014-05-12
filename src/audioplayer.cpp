@@ -16,9 +16,7 @@
 static paData playerData;
 
 AudioPlayer::AudioPlayer(MainWindow *_window, std::string _tempFolder) : window(_window), tempFolder(_tempFolder)
-{
-    std::cout << "temp:" << tempFolder << std::endl;
-    
+{    
     PaError err = Pa_Initialize();
     if (err != paNoError) {
         std::cerr << "PortAudio error: " << Pa_GetErrorText( err ) << std::endl;

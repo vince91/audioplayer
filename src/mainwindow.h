@@ -13,9 +13,12 @@
 #include <QMainWindow>
 #include <QPushButton>
 #include <QLabel>
+#include <QGraphicsScene>
+#include <QGraphicsView>
 #include "audioplayer.h"
 
 class AudioPlayer;
+class Waveform;
 
 class MainWindow : public QMainWindow
 {
@@ -36,11 +39,20 @@ private:
     QLabel *albumYear;
     QLabel *duration;
     QLabel *genre;
+    QGraphicsScene *waveformScene;
+    QGraphicsView *waveformView;
     AudioPlayer player;
+    
+    static const int waveformHeight = 150;
+    static const int margin = 10;
     
 private slots:
     void playPause();
     void stop();
+    void drawWaveform();
+
+protected:
+    void resizeEvent(QResizeEvent* event);
     
 };
 

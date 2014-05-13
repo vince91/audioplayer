@@ -316,7 +316,6 @@ bool AudioFile::createWaveform()
     std::cout << SHORT_MAX << "," << INT16_MAX << std::endl;
     std::cout << completed << std::endl;
     
-    waveform->test();
     
     
 

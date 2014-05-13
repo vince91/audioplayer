@@ -7,11 +7,14 @@
 //
 
 #include "mainwindow.h"
+#include "waveform.h"
 #include <QWidget>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QPixmap>
 #include <QDir>
+#include <QGraphicsView>
+#include <QPen>
 
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), player(this, QDir::tempPath().toStdString())
@@ -20,18 +23,22 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), player(this, QDir
     
     QWidget *centralWidget = new QWidget;
     QVBoxLayout *mainLayout = new QVBoxLayout;
-
+    
     /* command area */
     QHBoxLayout *commandLayout = new QHBoxLayout;
     
     playPauseButton = new QPushButton("Play");
     stopButton = new QPushButton("Stop");
     
+    QPushButton *temp = new QPushButton("Waveform");
+    
     connect(playPauseButton, SIGNAL(clicked()), this, SLOT(playPause()));
     connect(stopButton, SIGNAL(clicked()), this, SLOT(stop()));
+    connect(temp, SIGNAL(clicked()), this, SLOT(drawWaveform()));
     
     commandLayout->addWidget(playPauseButton);
     commandLayout->addWidget(stopButton);
+    commandLayout->addWidget(temp);
     commandLayout->addStretch();
     
     mainLayout->addLayout(commandLayout);
@@ -68,14 +75,18 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), player(this, QDir
     line->setFrameShape(QFrame::HLine);
     line->setFrameShadow(QFrame::Sunken);
     mainLayout->addWidget(line);
-    mainLayout->addWidget(new QLabel("waveform"));
     
     /* waveform area */
     
+    waveformScene = new QGraphicsScene();
+    waveformView = new QGraphicsView(waveformScene);
+    
+    waveformView->setFixedHeight(waveformHeight);
+    mainLayout->addWidget(waveformView);
     /* playlist area */
     
-    mainLayout->addStretch();
-
+    //mainLayout->addStretch();
+    
     
     centralWidget->setLayout(mainLayout);
     setCentralWidget(centralWidget);
@@ -140,5 +151,57 @@ void MainWindow::updateMetadata(std::string _title, std::string _artist, std::st
         albumCover->setPixmap(albumCoverPix.scaled(150, 150, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
     }
     
-
+    
 }
+
+void MainWindow::resizeEvent(QResizeEvent *event)
+{
+    //std::cout << waveformView->width() << std::endl;
+    //drawWaveform();
+    
+    
+    
+    
+}
+
+void MainWindow::drawWaveform()
+{
+    int newSize = waveformView->width() - margin;
+    int sceneHeight = waveformHeight - margin;
+    
+    Waveform::resize(newSize);
+    
+    std::vector<float> waveform = Waveform::getResizedWaveform();
+    
+    if (waveform.size() > 0) {
+        QPen topPen;
+        QPen bottonPen;
+    
+        waveformScene->setSceneRect(-newSize/2., -sceneHeight/2., newSize, sceneHeight);
+        
+        topPen.setColor(QColor(191, 11, 50));
+        bottonPen.setColor(QColor(191, 11, 50, 50));
+        
+        //waveformScene->addLine(0, 0, 0, 50, topPen);
+        //waveformScene->addLine(10, -50, 10, 0, topPen);
+
+        float max = Waveform::getMax();
+        
+        qreal x, h;
+        
+        for (int i = 0; i < newSize; ++i) {
+            x = floor(-newSize/2.) + i;
+            h = waveform[i]/max * sceneHeight/2.;
+            
+            waveformScene->addLine(x, -h, x, 20, topPen);
+            waveformScene->addLine(x, 20, x, h, bottonPen);
+            
+            
+            
+        }
+    }
+    
+    //Waveform::test();
+}
+
+

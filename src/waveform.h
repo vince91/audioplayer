@@ -18,18 +18,18 @@ class Waveform
 {
 public:
     void add(float);
-    static void resize(int);
+    void resize(int);
     int getSize() const {return waveform.size(); }
-    static const std::vector<float> & getResizedWaveform() { return resizedWaveform; }
-    static float getMax();
+    const std::vector<float> & getResizedWaveform() { return resizedWaveform; }
+    void clear();
     
     
-    static void test();
+    void test();
     
 private:
-    static std::vector<float> waveform;
-    static std::vector<float> resizedWaveform;
-    static bool valid;
+    std::vector<float> waveform;
+    std::vector<float> resizedWaveform;
+    bool valid = false;
     
 };
 

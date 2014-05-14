@@ -15,6 +15,7 @@
 #include <QLabel>
 #include <QGraphicsScene>
 #include <QGraphicsView>
+#include <QSlider>
 #include "audioplayer.h"
 
 class AudioPlayer;
@@ -30,6 +31,8 @@ public:
     
     void updateButton();
     void updateMetadata(std::string, std::string, std::string, std::string, std::string, std::string);
+    void drawWaveform();
+    void clearWaveform();
     
 private:
     QPushButton *playPauseButton;
@@ -41,15 +44,17 @@ private:
     QLabel *genre;
     QGraphicsScene *waveformScene;
     QGraphicsView *waveformView;
+    QSlider *slider;
     AudioPlayer player;
     
     static const int waveformHeight = 150;
     static const int margin = 10;
+    static const int offset = 30;
     
 private slots:
     void playPause();
     void stop();
-    void drawWaveform();
+    void sliderUpdate(int);
 
 protected:
     void resizeEvent(QResizeEvent* event);

@@ -12,11 +12,12 @@
 #include <cmath>
 #include "audiofile.h"
 #include "waveform.h"
+#include "mainwindow.h"
 
 #define SHORT_MAX 32768.
 
 
-AudioFile::AudioFile(std::string _filename, std::string _tempFolder) : filename(_filename), tempFolder(_tempFolder)
+AudioFile::AudioFile(MainWindow* _window, std::string _filename, std::string _tempFolder) :  window(_window), filename(_filename), tempFolder(_tempFolder)
 {
     av_register_all();
 }
@@ -28,10 +29,17 @@ AudioFile::~AudioFile()
     avformat_close_input(&waveformFormatContext);
     av_frame_free(&frame);
     av_frame_free(&waveformFrame);
+    
+    if (waveformThread != nullptr) {
+        if (waveformThread->joinable())
+            waveformThread->join();
+        delete waveformThread;
+    }
 }
 
 bool AudioFile::initialize()
 {
+    
     /* open input file, and allocate format context */
     if (avformat_open_input(&formatContext, filename.c_str(), NULL, NULL) < 0) {
         std::cerr << "Could not open source file (" << filename << ")\n";
@@ -50,12 +58,13 @@ bool AudioFile::initialize()
         std::cerr << "Could not open audio codec\n" << std::endl;
         return false;
     }
+
     
     
     /* dump file info to stderr */
-    //av_dump_format(formatContext, 0, filename.c_str(), 0);
+    av_dump_format(formatContext, 0, filename.c_str(), 0);
     
-    std::thread *waveformThread = new std::thread(&AudioFile::createWaveform, this);
+    waveformThread = new std::thread(&AudioFile::createWaveform, this);
     
     /* basic informations: metadata, sample format and mono/stereo */
     retrieveMetadata();
@@ -313,12 +322,8 @@ bool AudioFile::createWaveform()
         waveform->add(RMS(true));
     
     std::cout << "Waveform calculation completed" << std::endl;
-    std::cout << SHORT_MAX << "," << INT16_MAX << std::endl;
-    std::cout << completed << std::endl;
     
-    
-    
-
+    window->drawWaveform();
     
     return true;
 }

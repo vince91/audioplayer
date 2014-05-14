@@ -12,6 +12,7 @@
 #include <iostream>
 #include <list>
 #include <thread>
+#include <vector>
 #include <portaudio.h>
 #include "audiofile.h"
 
@@ -28,6 +29,7 @@ public:
     void stop(bool);
     bool isPlaying() const { return playing; }
     bool isPaused() const { return paused; }
+    const std::vector<float> & getWaveform(int) const;
     
 private:
     MainWindow *window;

@@ -9,9 +9,6 @@
 #include "waveform.h"
 #include <cmath>
 
-bool Waveform::valid = false;
-std::vector<float> Waveform::waveform;
-std::vector<float> Waveform::resizedWaveform;
 
 void Waveform::add(float value)
 {
@@ -20,7 +17,7 @@ void Waveform::add(float value)
 
 void Waveform::test()
 {
-    for (int i = 0; i < resizedWaveform.size(); ++i) {
+    for (unsigned int i = 0; i < resizedWaveform.size(); ++i) {
         std::cout << resizedWaveform[i] << ",";
         
     }
@@ -41,18 +38,12 @@ void Waveform::resize(int width)
         resizedWaveform.push_back(waveform[round(z)]);
     }
     
-    std::cout << width << ";" << resizedWaveform.size() << std::endl;
+    //std::cout << width << ";" << resizedWaveform.size() << std::endl;
 }
 
-float Waveform::getMax()
+void Waveform::clear()
 {
-    float max = 0;
-    float current;
-    
-    for (int i = 0; i < resizedWaveform.size(); ++i) {
-        if ((current = resizedWaveform[i]) > max)
-            max = current;
-    }
-    
-    return max;
+    waveform.clear();
+    resizedWaveform.clear();
+    valid = false;
 }

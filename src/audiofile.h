@@ -17,6 +17,7 @@ extern "C" {
 #include <libavformat/avformat.h>
 }
 
+class MainWindow;
 class AudioPlayer;
 class Waveform;
 
@@ -25,7 +26,7 @@ class AudioFile
     friend class AudioPlayer;
     
 public:
-    AudioFile(std::string, std::string);
+    AudioFile(MainWindow*, std::string, std::string);
     ~AudioFile();
     
     const float * getFirstChannel() const { return firstChannel; }
@@ -42,6 +43,7 @@ public:
  
     
 private:
+    MainWindow* window;
     std::string filename;
     AVSampleFormat sampleFormat;
     
@@ -79,6 +81,7 @@ private:
     Waveform *waveform;
     float *waveformBuffer; unsigned int wfReadPos = 0, wfWritePos = 0, samplesPerChunk;
     float RMS(bool);
+    std::thread *waveformThread = nullptr;
     
     long int completed = 0;
     

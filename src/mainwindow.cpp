@@ -34,7 +34,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), player(this, QDir
     
     connect(playPauseButton, SIGNAL(clicked()), this, SLOT(playPause()));
     connect(stopButton, SIGNAL(clicked()), this, SLOT(stop()));
-    connect(temp, SIGNAL(clicked()), this, SLOT(drawWaveform()));
+    //connect(temp, SIGNAL(clicked()), this, SLOT(drawWaveform()));
     
     commandLayout->addWidget(playPauseButton);
     commandLayout->addWidget(stopButton);
@@ -45,6 +45,12 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), player(this, QDir
     QFrame* line = new QFrame();
     line->setFrameShape(QFrame::HLine);
     line->setFrameShadow(QFrame::Sunken);
+    
+    slider = new QSlider(Qt::Horizontal);
+    //slider->
+    connect(slider, SIGNAL(valueChanged(int)), this, SLOT(sliderUpdate(int)));
+    mainLayout->addWidget(slider);
+    
     mainLayout ->addWidget(line);
     
     /* informations area */
@@ -82,6 +88,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), player(this, QDir
     waveformView = new QGraphicsView(waveformScene);
     
     waveformView->setFixedHeight(waveformHeight);
+    waveformView->setStyleSheet( "QGraphicsView { border-style: none; }" );
     mainLayout->addWidget(waveformView);
     /* playlist area */
     
@@ -90,6 +97,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), player(this, QDir
     
     centralWidget->setLayout(mainLayout);
     setCentralWidget(centralWidget);
+    
+    this->setMinimumWidth(600);
 }
 
 MainWindow::~MainWindow()
@@ -159,6 +168,7 @@ void MainWindow::resizeEvent(QResizeEvent *event)
     //std::cout << waveformView->width() << std::endl;
     //drawWaveform();
     
+    (void)event;
     
     
     
@@ -166,42 +176,54 @@ void MainWindow::resizeEvent(QResizeEvent *event)
 
 void MainWindow::drawWaveform()
 {
-    int newSize = waveformView->width() - margin;
+    int newSize = waveformView->width();//- margin;
     int sceneHeight = waveformHeight - margin;
     
-    Waveform::resize(newSize);
     
-    std::vector<float> waveform = Waveform::getResizedWaveform();
+    std::vector<float> waveform = player.getWaveform(newSize);
+    
     
     if (waveform.size() > 0) {
+                
         QPen topPen;
         QPen bottonPen;
     
-        waveformScene->setSceneRect(-newSize/2., -sceneHeight/2., newSize, sceneHeight);
+        waveformScene->setSceneRect(0, -sceneHeight/2., newSize, sceneHeight);
         
         topPen.setColor(QColor(191, 11, 50));
         bottonPen.setColor(QColor(191, 11, 50, 50));
-        
-        //waveformScene->addLine(0, 0, 0, 50, topPen);
-        //waveformScene->addLine(10, -50, 10, 0, topPen);
 
-        float max = Waveform::getMax();
+        float max = 0;
+        float current;
+        for (unsigned int i = 0; i < waveform.size(); ++i) {
+            if ((current = waveform[i]) > max)
+                max = current;
+        }
+        
         
         qreal x, h;
         
         for (int i = 0; i < newSize; ++i) {
-            x = floor(-newSize/2.) + i;
-            h = waveform[i]/max * sceneHeight/2.;
+            x = i+0.5;
+            h = waveform[i]/max * (sceneHeight/2. + offset);
             
-            waveformScene->addLine(x, -h, x, 20, topPen);
-            waveformScene->addLine(x, 20, x, h, bottonPen);
-            
-            
+            waveformScene->addLine(x, -h + offset, x, offset, topPen);
+            waveformScene->addLine(x, offset, x, offset + 0.4*h, bottonPen);
             
         }
     }
     
     //Waveform::test();
+}
+
+void MainWindow::sliderUpdate(int value)
+{
+    std::cout << value << std::endl;
+}
+
+void MainWindow::clearWaveform()
+{
+    waveformScene->clear();
 }
 
 

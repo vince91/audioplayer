@@ -9,6 +9,7 @@
 #include "audioplayer.h"
 #include "audiofile.h"
 #include "mainwindow.h"
+#include "waveform.h"
 #include <portaudio.h>
 #include <thread>
 
@@ -45,7 +46,7 @@ AudioPlayer::AudioPlayer(MainWindow *_window, std::string _tempFolder) : window(
 
 bool AudioPlayer::loadAndPlay(std::string filename)
 {
-    audio = new AudioFile(filename, tempFolder);
+    audio = new AudioFile(window, filename, tempFolder);
     
     if (!audio->initialize()) {
         std::cerr << "Could not load " << filename << std::endl;
@@ -81,12 +82,9 @@ void AudioPlayer::pause()
 {
     if (paused) {
         paused = false;
-        PaError err;
-        err = Pa_StartStream( stream );
-        if (err != paNoError) {
-            std::cerr << "PortAudio error: " << Pa_GetErrorText( err ) << std::endl;
-        }
-        
+        PaError err = Pa_StartStream(stream);
+        if (err != paNoError)
+            std::cerr << "PortAudio error: " << Pa_GetErrorText(err) << std::endl;
     }
     else {
         Pa_AbortStream(stream);
@@ -94,13 +92,13 @@ void AudioPlayer::pause()
     }
     
     window->updateButton();
-    
 }
 
 void AudioPlayer::stop(bool callback) {
     
     playing = false; paused = false;
     window->updateButton();
+    window->clearWaveform();
     
     if (audio == nullptr)
         return;
@@ -154,6 +152,12 @@ int AudioPlayer::patestCallback(const void *inputBuffer, void *outputBuffer, uns
     }
     
     return paContinue;
+}
+
+const std::vector<float> & AudioPlayer::getWaveform(int lenght) const
+{
+    audio->waveform->resize(lenght);
+    return audio->waveform->getResizedWaveform();
 }
 
 

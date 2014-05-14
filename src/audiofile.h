@@ -29,18 +29,11 @@ public:
     AudioFile(MainWindow*, std::string, std::string);
     ~AudioFile();
     
-    const float * getFirstChannel() const { return firstChannel; }
-    const float * getSecondChannel() const { return secondChannel; }
-    int * getReadPosition() { return &readPos; }
-    const int * getLastIndex() const { return &lastIndex; }
-    
     bool initialize();
     void stopThread() { lastIndex = 0; }
     
-    int total = 0;
     void threadFillBuffer();
-    
- 
+
     
 private:
     MainWindow* window;
@@ -61,6 +54,7 @@ private:
 
     int writePos = 0, readPos = 0, lastIndex = -1;
     float firstChannel[3*BUFFER_SIZE], secondChannel[3*BUFFER_SIZE];
+    uint32_t playedSamples = 0;
 
     AVFormatContext *formatContext = NULL;
     AVCodecContext *codecContext = NULL;

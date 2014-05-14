@@ -27,6 +27,7 @@ public:
     bool loadAndPlay(std::string);
     void pause();
     void stop(bool);
+    void jumpTo(float);
     bool isPlaying() const { return playing; }
     bool isPaused() const { return paused; }
     const std::vector<float> & getWaveform(int) const;
@@ -51,9 +52,10 @@ private:
 
 typedef struct
 {
+    int *readPos;
+    uint32_t *playedSamples;
     const float *firstChannel;
     const float *secondChannel;
-    int *readPos;
     const int *lastIndex;
     AudioPlayer *player;
 }

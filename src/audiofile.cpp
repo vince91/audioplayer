@@ -186,9 +186,7 @@ bool AudioFile::fillBuffer()
             count +=  frame->nb_samples;
         } while (gotFrame && count < BUFFER_SIZE);
     }
-    
-    total += count;
-    
+        
     bool ret = (count >= BUFFER_SIZE);
     
     if (!ret)
@@ -209,7 +207,9 @@ void AudioFile::threadFillBuffer()
             if ((writePos + 3*BUFFER_SIZE - readPos) < BUFFER_SIZE)
                 fillBuffer();
         }
+        window->updateTime(playedSamples/44100.);
         Pa_Sleep(10);
+        //std::cout << (float)playedSamples/44100 << std::endl;
     }
 }
 

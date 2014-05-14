@@ -17,7 +17,7 @@
 static paData playerData;
 
 AudioPlayer::AudioPlayer(MainWindow *_window, std::string _tempFolder) : window(_window), tempFolder(_tempFolder)
-{    
+{
     PaError err = Pa_Initialize();
     if (err != paNoError) {
         std::cerr << "PortAudio error: " << Pa_GetErrorText( err ) << std::endl;
@@ -55,10 +55,11 @@ bool AudioPlayer::loadAndPlay(std::string filename)
     
     window->updateMetadata(audio->title, audio->artist, audio->album, audio->year, audio->genre, audio->duration);
     
-    playerData.firstChannel = audio->getFirstChannel();
-    playerData.secondChannel = audio->getSecondChannel();
-    playerData.readPos = audio->getReadPosition();
-    playerData.lastIndex = audio->getLastIndex();
+    playerData.firstChannel = audio->firstChannel;
+    playerData.secondChannel = audio->secondChannel;
+    playerData.readPos = &audio->readPos;
+    playerData.lastIndex = &audio->lastIndex;
+    playerData.playedSamples = &audio->playedSamples;
     
     Pa_StopStream(stream);
     
@@ -74,7 +75,7 @@ bool AudioPlayer::loadAndPlay(std::string filename)
     
     playing = true;
     window->updateButton();
-        
+    
     return true;
 }
 
@@ -102,7 +103,7 @@ void AudioPlayer::stop(bool callback) {
     
     if (audio == nullptr)
         return;
-
+    
     if(!callback)
         Pa_StopStream(stream);
     
@@ -142,11 +143,13 @@ int AudioPlayer::patestCallback(const void *inputBuffer, void *outputBuffer, uns
             return paComplete;
         }
         else {
-        *out++ = data->firstChannel[*readPos]; /* left channel */
-        *out++ = data->secondChannel[*readPos]; /* right channel */
-        
-        if (++(*readPos) == 3*BUFFER_SIZE)
-            *readPos = 0;
+            *out++ = data->firstChannel[*readPos]; /* left channel */
+            *out++ = data->secondChannel[*readPos]; /* right channel */
+            
+            ++(*data->playedSamples);
+            
+            if (++(*readPos) == 3*BUFFER_SIZE)
+                *readPos = 0;
         }
         
     }

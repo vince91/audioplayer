@@ -33,6 +33,7 @@ public:
     void updateMetadata(std::string, std::string, std::string, std::string, std::string, std::string);
     void drawWaveform();
     void clearWaveform();
+    void updateTime(float);
     
 private:
     QPushButton *playPauseButton;
@@ -42,6 +43,7 @@ private:
     QLabel *albumYear;
     QLabel *duration;
     QLabel *genre;
+    QLabel *elapsedTime;
     QGraphicsScene *waveformScene;
     QGraphicsView *waveformView;
     QSlider *slider;

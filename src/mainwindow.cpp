@@ -36,9 +36,12 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), player(this, QDir
     connect(stopButton, SIGNAL(clicked()), this, SLOT(stop()));
     //connect(temp, SIGNAL(clicked()), this, SLOT(drawWaveform()));
     
+    elapsedTime = new QLabel("00:00");
+    
     commandLayout->addWidget(playPauseButton);
     commandLayout->addWidget(stopButton);
-    commandLayout->addWidget(temp);
+    commandLayout->addWidget(elapsedTime);
+    //commandLayout->addWidget(temp);
     commandLayout->addStretch();
     
     mainLayout->addLayout(commandLayout);
@@ -47,7 +50,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), player(this, QDir
     line->setFrameShadow(QFrame::Sunken);
     
     slider = new QSlider(Qt::Horizontal);
-    //slider->
+    slider->setMaximum(1000);    //slider->
     connect(slider, SIGNAL(valueChanged(int)), this, SLOT(sliderUpdate(int)));
     mainLayout->addWidget(slider);
     
@@ -224,6 +227,15 @@ void MainWindow::sliderUpdate(int value)
 void MainWindow::clearWaveform()
 {
     waveformScene->clear();
+}
+
+void MainWindow::updateTime(float time)
+{
+    int minuts = time/60;
+    int seconds = time - minuts*60;
+    std::string s = std::to_string(minuts) + ":" + std::to_string(seconds);
+    
+    elapsedTime->setText(s.c_str());
 }
 
 

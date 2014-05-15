@@ -57,10 +57,14 @@ private slots:
     void playPause();
     void stop();
     void sliderUpdate(int);
+    void updateGUI();
 
 protected:
     void resizeEvent(QResizeEvent* event);
     void closeEvent(QCloseEvent *event);
+    
+signals:
+    void mainThreadSignal();
 
     
 };

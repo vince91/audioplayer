@@ -31,7 +31,8 @@ public:
     bool isPlaying() const { return playing; }
     bool isPaused() const { return paused; }
     const std::vector<float> & getWaveform(int) const;
-    std::string getDuration() const;
+    std::string getDurationString() const;
+    float getDuration() const;
     
 private:
     MainWindow *window;

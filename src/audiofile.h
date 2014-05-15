@@ -30,7 +30,7 @@ public:
     ~AudioFile();
     
     bool initialize();
-    void stopThread() { lastIndex = 0; }
+    void stopThread() { lastIndex = -2; }
     
     void threadFillBuffer();
 
@@ -73,11 +73,12 @@ private:
     std::string artist, title, album, genre, year, duration, tempFolder;
     
     Waveform *waveform;
-    float *waveformBuffer; unsigned int wfReadPos = 0, wfWritePos = 0, samplesPerChunk;
+    float *waveformBuffer; unsigned int wfReadPos = 0, wfWritePos = 0, samplesPerChunk, waveformBufferSize;
     float RMS(bool);
     std::thread *waveformThread = nullptr;
     
     long int completed = 0;
+    uint32_t totalSamples = 0;
     
 };
 

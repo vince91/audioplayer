@@ -15,6 +15,7 @@
 #include "mainwindow.h"
 
 #define SHORT_MAX 32768.
+#define THREAD_STOP_REQUESTED -2
 
 
 AudioFile::AudioFile(MainWindow* _window, std::string _filename, std::string _tempFolder) :  window(_window), filename(_filename), tempFolder(_tempFolder)
@@ -62,7 +63,7 @@ bool AudioFile::initialize()
     
     
     /* dump file info to stderr */
-    av_dump_format(formatContext, 0, filename.c_str(), 0);
+    //av_dump_format(formatContext, 0, filename.c_str(), 0);
     
     waveformThread = new std::thread(&AudioFile::createWaveform, this);
     
@@ -198,7 +199,7 @@ bool AudioFile::fillBuffer()
 void AudioFile::threadFillBuffer()
 {
     /* constantly fill circular buffer so portaudio has always enough data to process */
-    while (lastIndex == -1) {
+    while (lastIndex != THREAD_STOP_REQUESTED) {
         if (writePos > readPos) {
             if ((writePos - readPos - 1) < BUFFER_SIZE)
                 fillBuffer();
@@ -209,7 +210,6 @@ void AudioFile::threadFillBuffer()
         }
         window->updateTime(playedSamples/44100.);
         Pa_Sleep(10);
-        //std::cout << (float)playedSamples/44100 << std::endl;
     }
 }
 
@@ -289,12 +289,14 @@ bool AudioFile::createWaveform()
     
     waveform = new Waveform();
     samplesPerChunk = (float) waveformFormatContext->duration/AV_TIME_BASE * codecContext->sample_rate / WAVEFORM_SIZE;
-    waveformBuffer = new float[3*samplesPerChunk];
+    waveformBufferSize = (samplesPerChunk < 10000)?10000:samplesPerChunk;
+    
+    waveformBuffer = new float[3*waveformBufferSize];
     
     int lenght;
     int count = 0;
     
-    
+    std::cout << samplesPerChunk << std::endl;
     
     /* read frames from the file */
     while (av_read_frame(waveformFormatContext, &waveformPacket) >= 0) {
@@ -325,6 +327,8 @@ bool AudioFile::createWaveform()
     
     window->drawWaveform();
     
+    std::cout << "exact duration:" << std::to_string((float)totalSamples/44100.) << ";" << totalSamples << std::endl;
+    
     return true;
 }
 
@@ -350,6 +354,9 @@ int AudioFile::waveformDecodePacket()
         float sample;
         
         for (int i = 0; i < waveformFrame->nb_samples; ++i) {
+            
+            ++totalSamples;
+            
             if(sampleFormat == AV_SAMPLE_FMT_S16P) {
                 sample = (short) (waveformFrame->extended_data[0][2 * i] | waveformFrame->extended_data[0][2 * i + 1] << 8) / SHORT_MAX;
                 
@@ -362,7 +369,7 @@ int AudioFile::waveformDecodePacket()
                 waveformBuffer[wfWritePos] = sample;
                 completed++;
                 
-                if(++wfWritePos == 3*samplesPerChunk)
+                if(++wfWritePos == 3*waveformBufferSize)
                     wfWritePos = 0;
                 
             }
@@ -385,7 +392,7 @@ float AudioFile::RMS(bool last)
         while (wfReadPos != wfWritePos) {
             value += waveformBuffer[wfReadPos]*waveformBuffer[wfReadPos];
             
-            if (++wfReadPos == 3*samplesPerChunk)
+            if (++wfReadPos == 3*waveformBufferSize)
                 wfReadPos = 0;
             
             ++size;
@@ -396,7 +403,7 @@ float AudioFile::RMS(bool last)
             
             value += waveformBuffer[wfReadPos]*waveformBuffer[wfReadPos];
             
-            if (++wfReadPos == 3*samplesPerChunk)
+            if (++wfReadPos == 3*waveformBufferSize)
                 wfReadPos = 0;
             
             ++size;

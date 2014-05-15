@@ -61,6 +61,7 @@ bool AudioPlayer::loadAndPlay(std::string filename)
     playerData.lastIndex = &audio->lastIndex;
     playerData.playedSamples = &audio->playedSamples;
     
+    
     Pa_StopStream(stream);
     
     PaError err;
@@ -98,9 +99,12 @@ void AudioPlayer::pause()
 void AudioPlayer::stop(bool callback) {
     
     playing = false; paused = false;
-    window->updateButton();
-    window->clearWaveform();
     
+    emit window->mainThreadSignal();
+    window->updateButton();
+    
+    //std::cout << "read samples:" << audio->playedSamples << std::endl;
+
     if (audio == nullptr)
         return;
     
@@ -136,7 +140,7 @@ int AudioPlayer::patestCallback(const void *inputBuffer, void *outputBuffer, uns
     for (unsigned int i = 0; i < framesPerBuffer; ++i) {
         
         if (*readPos == *(data->lastIndex)) {
-            std::cout << "paComplete\n";
+            std::cout << "paComplete\n" << *data->playedSamples << std::endl;;
             *out++ = 0.;
             *out++ = 0.;
             data->player->stop(true);
@@ -163,9 +167,14 @@ const std::vector<float> & AudioPlayer::getWaveform(int lenght) const
     return audio->waveform->getResizedWaveform();
 }
 
-std::string AudioPlayer::getDuration() const
+std::string AudioPlayer::getDurationString() const
 {
     return audio->duration;
+}
+
+float AudioPlayer::getDuration() const
+{
+    return (float)audio->totalSamples/audio->codecContext->sample_rate;
 }
 
 

@@ -17,8 +17,8 @@ void Waveform::add(float value)
 
 void Waveform::test()
 {
-    for (unsigned int i = 0; i < resizedWaveform.size(); ++i) {
-        std::cout << resizedWaveform[i] << ",";
+    for (unsigned int i = 0; i < waveform.size(); ++i) {
+        std::cout << waveform[i] << ",";
         
     }
     std::cout << std::endl;

@@ -22,6 +22,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), player(this, QDir
 {
     setWindowTitle("Audio Player");
     
+    connect(this, SIGNAL(mainThreadSignal()), this, SLOT(updateGUI()));
+    
     QWidget *centralWidget = new QWidget;
     QVBoxLayout *mainLayout = new QVBoxLayout;
     
@@ -126,7 +128,7 @@ void MainWindow::playPause()
     if (player.isPlaying())
         player.pause();
     else
-        player.loadAndPlay("/Users/vincent/Music/AVRIL HOUSE/Alejandro Mosso - Nightwalker (LoSoul Remix) www.what-dj-plays.com.mp3");
+        player.loadAndPlay("/Users/vincent/Music/nightwalker.mp3");
 }
 
 void MainWindow::stop()
@@ -233,21 +235,30 @@ void MainWindow::drawWaveform()
 
 void MainWindow::sliderUpdate(int value)
 {
-    std::cout << value << std::endl;
+    //std::cout << value << std::endl;
 }
 
-void MainWindow::clearWaveform()
-{
-    waveformScene->clear();
-}
 
 void MainWindow::updateTime(float time)
 {
     int minuts = time/60;
     int seconds = time - minuts*60;
-    std::string s = (minuts<10?"0":"") + std::to_string(minuts) + ":" + (seconds<10?"0":"") + std::to_string(seconds) + "/" + player.getDuration();
+    std::string s = (minuts<10?"0":"") + std::to_string(minuts) + ":" + (seconds<10?"0":"") + std::to_string(seconds) + "/" + player.getDurationString();
     
     elapsedTime->setText(s.c_str());
+    
+    int elapsedPercentage = round(1000*time/player.getDuration());
+    slider->setValue(elapsedPercentage);
+    //std::cout << time << std::endl;
+    
+}
+
+void MainWindow::updateGUI()
+{
+    if (!player.isPlaying()) {
+        waveformScene->clear();
+        elapsedTime->setText("00:00/00:00");
+    }
 }
 
 

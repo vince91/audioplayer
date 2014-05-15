@@ -15,6 +15,7 @@
 #include <QDir>
 #include <QGraphicsView>
 #include <QPen>
+#include <QCloseEvent>
 
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), player(this, QDir::tempPath().toStdString())
@@ -36,24 +37,29 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), player(this, QDir
     connect(stopButton, SIGNAL(clicked()), this, SLOT(stop()));
     //connect(temp, SIGNAL(clicked()), this, SLOT(drawWaveform()));
     
-    elapsedTime = new QLabel("00:00");
     
     commandLayout->addWidget(playPauseButton);
     commandLayout->addWidget(stopButton);
-    commandLayout->addWidget(elapsedTime);
     //commandLayout->addWidget(temp);
     commandLayout->addStretch();
     
     mainLayout->addLayout(commandLayout);
-    QFrame* line = new QFrame();
-    line->setFrameShape(QFrame::HLine);
-    line->setFrameShadow(QFrame::Sunken);
+
     
+    elapsedTime = new QLabel("00:00/00:00");
+
+    QHBoxLayout *sliderDuration = new QHBoxLayout;
     slider = new QSlider(Qt::Horizontal);
     slider->setMaximum(1000);    //slider->
     connect(slider, SIGNAL(valueChanged(int)), this, SLOT(sliderUpdate(int)));
-    mainLayout->addWidget(slider);
     
+    sliderDuration->addWidget(slider);
+    sliderDuration->addWidget(elapsedTime);
+    mainLayout->addLayout(sliderDuration);
+    
+    QFrame* line = new QFrame();
+    line->setFrameShape(QFrame::HLine);
+    line->setFrameShadow(QFrame::Sunken);
     mainLayout ->addWidget(line);
     
     /* informations area */
@@ -102,6 +108,12 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), player(this, QDir
     setCentralWidget(centralWidget);
     
     this->setMinimumWidth(600);
+}
+
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    player.stop(false);
+    event->accept();
 }
 
 MainWindow::~MainWindow()
@@ -233,7 +245,7 @@ void MainWindow::updateTime(float time)
 {
     int minuts = time/60;
     int seconds = time - minuts*60;
-    std::string s = std::to_string(minuts) + ":" + std::to_string(seconds);
+    std::string s = (minuts<10?"0":"") + std::to_string(minuts) + ":" + (seconds<10?"0":"") + std::to_string(seconds) + "/" + player.getDuration();
     
     elapsedTime->setText(s.c_str());
 }

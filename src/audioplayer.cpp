@@ -163,4 +163,9 @@ const std::vector<float> & AudioPlayer::getWaveform(int lenght) const
     return audio->waveform->getResizedWaveform();
 }
 
+std::string AudioPlayer::getDuration() const
+{
+    return audio->duration;
+}
+
 

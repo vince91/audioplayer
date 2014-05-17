@@ -33,6 +33,7 @@ public:
     const std::vector<float> & getWaveform(int) const;
     std::string getDurationString() const;
     float getDuration() const;
+    void jumpTo(int);
     
 private:
     MainWindow *window;
@@ -59,6 +60,8 @@ typedef struct
     const float *firstChannel;
     const float *secondChannel;
     const int *lastIndex;
+    bool *seekRequested;
+    const int *newReadPos;
     AudioPlayer *player;
 }
 paData;

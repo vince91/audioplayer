@@ -49,14 +49,18 @@ private:
     QSlider *slider;
     AudioPlayer player;
     
+    bool sliderPressed = false;
+    
     static const int waveformHeight = 150;
     static const int margin = 10;
     static const int offset = 30;
+
     
 private slots:
     void playPause();
     void stop();
-    void sliderUpdate(int);
+    void sliderPress();
+    void sliderRelease();
     void updateGUI();
 
 protected:

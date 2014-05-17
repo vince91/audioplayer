@@ -49,6 +49,7 @@ private:
     void saveAlbumCover();
     bool createWaveform();
     
+    void jumpTo(int16_t);
     
     bool stereo = false;
 
@@ -79,6 +80,10 @@ private:
     
     long int completed = 0;
     uint32_t totalSamples = 0;
+    
+    bool seekRequested = false;
+    int64_t seekTime;
+    int newReadPos = 0;
     
 };
 

@@ -60,6 +60,8 @@ bool AudioPlayer::loadAndPlay(std::string filename)
     playerData.readPos = &audio->readPos;
     playerData.lastIndex = &audio->lastIndex;
     playerData.playedSamples = &audio->playedSamples;
+    playerData.seekRequested = &audio->seekRequested;
+    playerData.newReadPos = &audio->newReadPos;
     
     
     Pa_StopStream(stream);
@@ -140,13 +142,22 @@ int AudioPlayer::patestCallback(const void *inputBuffer, void *outputBuffer, uns
     for (unsigned int i = 0; i < framesPerBuffer; ++i) {
         
         if (*readPos == *(data->lastIndex)) {
-            std::cout << "paComplete\n" << *data->playedSamples << std::endl;;
+            //std::cout << "paComplete\n" << *data->playedSamples << std::endl;;
             *out++ = 0.;
             *out++ = 0.;
             data->player->stop(true);
             return paComplete;
         }
         else {
+            
+            if (*data->seekRequested) {
+                *out = 0.;
+                *(out+1) = 0.;
+                *data->seekRequested = false;
+                *readPos = *data->newReadPos;
+                
+            }
+            
             *out++ = data->firstChannel[*readPos]; /* left channel */
             *out++ = data->secondChannel[*readPos]; /* right channel */
             
@@ -176,5 +187,26 @@ float AudioPlayer::getDuration() const
 {
     return (float)audio->totalSamples/audio->codecContext->sample_rate;
 }
+
+void AudioPlayer::jumpTo(int value)
+{
+    if (playing) {
+        
+        
+        int64_t time = value/1000. * getDuration() * audio->audioStream->time_base.den / audio->audioStream->time_base.num;
+        
+        
+        
+        audio->playedSamples = value/1000. * audio->totalSamples;
+        av_seek_frame(audio->formatContext, audio->audioStreamIndex, time, AVSEEK_FLAG_BACKWARD);
+
+        audio->newReadPos = audio->writePos;
+        audio->fillBuffer();
+        audio->seekRequested = true;
+
+    }
+}
+
+
 
 

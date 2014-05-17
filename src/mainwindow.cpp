@@ -33,7 +33,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), player(this, QDir
     playPauseButton = new QPushButton("Play");
     stopButton = new QPushButton("Stop");
     
-    QPushButton *temp = new QPushButton("Waveform");
+    //QPushButton *temp = new QPushButton("Waveform");
     
     connect(playPauseButton, SIGNAL(clicked()), this, SLOT(playPause()));
     connect(stopButton, SIGNAL(clicked()), this, SLOT(stop()));
@@ -46,14 +46,15 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), player(this, QDir
     commandLayout->addStretch();
     
     mainLayout->addLayout(commandLayout);
-
+    
     
     elapsedTime = new QLabel("00:00/00:00");
-
+    
     QHBoxLayout *sliderDuration = new QHBoxLayout;
     slider = new QSlider(Qt::Horizontal);
     slider->setMaximum(1000);    //slider->
-    connect(slider, SIGNAL(valueChanged(int)), this, SLOT(sliderUpdate(int)));
+    connect(slider, SIGNAL(sliderPressed()), this, SLOT(sliderPress()));
+    connect(slider, SIGNAL(sliderReleased()), this, SLOT(sliderRelease()));
     
     sliderDuration->addWidget(slider);
     sliderDuration->addWidget(elapsedTime);
@@ -99,7 +100,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), player(this, QDir
     waveformView = new QGraphicsView(waveformScene);
     
     waveformView->setFixedHeight(waveformHeight);
-    waveformView->setStyleSheet( "QGraphicsView { border-style: none; }" );
+    waveformView->setStyleSheet( "QGraphicsView { border-style: none; background: transparent;}" );
     mainLayout->addWidget(waveformView);
     /* playlist area */
     
@@ -201,15 +202,15 @@ void MainWindow::drawWaveform()
     
     
     if (waveform.size() > 0) {
-                
+        
         QPen topPen;
         QPen bottonPen;
-    
+        
         waveformScene->setSceneRect(0, -sceneHeight/2., newSize, sceneHeight);
         
         topPen.setColor(QColor(191, 11, 50));
         bottonPen.setColor(QColor(191, 11, 50, 50));
-
+        
         float max = 0;
         float current;
         for (unsigned int i = 0; i < waveform.size(); ++i) {
@@ -233,9 +234,17 @@ void MainWindow::drawWaveform()
     //Waveform::test();
 }
 
-void MainWindow::sliderUpdate(int value)
+
+void MainWindow::sliderPress()
 {
-    //std::cout << value << std::endl;
+    sliderPressed = true;
+}
+
+void MainWindow::sliderRelease()
+{
+    sliderPressed = false;
+    std::cout << slider->value() << std::endl;
+    player.jumpTo(slider->value());
 }
 
 
@@ -247,10 +256,11 @@ void MainWindow::updateTime(float time)
     
     elapsedTime->setText(s.c_str());
     
-    int elapsedPercentage = round(1000*time/player.getDuration());
-    slider->setValue(elapsedPercentage);
-    //std::cout << time << std::endl;
-    
+    if (!sliderPressed) {
+        int elapsedPercentage = round(1000*time/player.getDuration());
+        slider->setValue(elapsedPercentage);
+        //std::cout << time << std::endl;
+    }
 }
 
 void MainWindow::updateGUI()

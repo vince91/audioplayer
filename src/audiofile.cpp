@@ -59,7 +59,7 @@ bool AudioFile::initialize()
         std::cerr << "Could not open audio codec\n" << std::endl;
         return false;
     }
-
+    
     
     
     /* dump file info to stderr */
@@ -187,7 +187,7 @@ bool AudioFile::fillBuffer()
             count +=  frame->nb_samples;
         } while (gotFrame && count < BUFFER_SIZE);
     }
-        
+    
     bool ret = (count >= BUFFER_SIZE);
     
     if (!ret)
@@ -200,14 +200,17 @@ void AudioFile::threadFillBuffer()
 {
     /* constantly fill circular buffer so portaudio has always enough data to process */
     while (lastIndex != THREAD_STOP_REQUESTED) {
-        if (writePos > readPos) {
-            if ((writePos - readPos - 1) < BUFFER_SIZE)
-                fillBuffer();
-        }
-        else {
-            if ((writePos + 3*BUFFER_SIZE - readPos) < BUFFER_SIZE)
-                fillBuffer();
-        }
+        
+
+            if (writePos > readPos) {
+                if ((writePos - readPos - 1) < BUFFER_SIZE)
+                    fillBuffer();
+            }
+            else {
+                if ((writePos + 3*BUFFER_SIZE - readPos) < BUFFER_SIZE)
+                    fillBuffer();
+            }
+        
         window->updateTime(playedSamples/44100.);
         Pa_Sleep(10);
     }
@@ -233,7 +236,7 @@ void AudioFile::retrieveMetadata()
         genre = tag->value;
     
     int64_t d = formatContext->duration/AV_TIME_BASE;
-    duration = std::to_string(d/60) + ":" + ((d%60<10)?"0":"") + std::to_string(d%60);
+    duration = ((d/60<10)?"0":"") + std::to_string(d/60) + ":" + ((d%60<10)?"0":"") + std::to_string(d%60);
 }
 
 void AudioFile::saveAlbumCover()
@@ -260,7 +263,7 @@ void AudioFile::saveAlbumCover()
 
 bool AudioFile::createWaveform()
 {
-    std::cerr << "Waveform calculation\n";
+    //std::cerr << "Waveform calculation\n";
     
     if (avformat_open_input(&waveformFormatContext, filename.c_str(), NULL, NULL) < 0) {
         std::cerr << "Waveform: could not open source file (" << filename << ")\n";
@@ -296,8 +299,6 @@ bool AudioFile::createWaveform()
     int lenght;
     int count = 0;
     
-    std::cout << samplesPerChunk << std::endl;
-    
     /* read frames from the file */
     while (av_read_frame(waveformFormatContext, &waveformPacket) >= 0) {
         AVPacket orig_pkt = waveformPacket;
@@ -323,11 +324,11 @@ bool AudioFile::createWaveform()
     if (waveform->getSize() < WAVEFORM_SIZE)
         waveform->add(RMS(true));
     
-    std::cout << "Waveform calculation completed" << std::endl;
+    //std::cout << "Waveform calculation completed" << std::endl;
     
     window->drawWaveform();
     
-    std::cout << "exact duration:" << std::to_string((float)totalSamples/44100.) << ";" << totalSamples << std::endl;
+    //std::cout << "exact duration:" << std::to_string((float)totalSamples/44100.) << ";" << totalSamples << std::endl;
     
     return true;
 }
@@ -411,9 +412,16 @@ float AudioFile::RMS(bool last)
     }
     
     value = sqrt((float) value / size);
-
+    
     
     return value;
 }
 
+void AudioFile::jumpTo(int16_t time)
+{
+    
+    if (av_seek_frame(formatContext, audioStreamIndex, time, AVSEEK_FLAG_BACKWARD) < 0) {
+        std::cerr << "ffmpeg: Could not seek frame\n";
+    }
+}
 

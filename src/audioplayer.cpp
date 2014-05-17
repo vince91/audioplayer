@@ -150,14 +150,6 @@ int AudioPlayer::patestCallback(const void *inputBuffer, void *outputBuffer, uns
         }
         else {
             
-            if (*data->seekRequested) {
-                *out = 0.;
-                *(out+1) = 0.;
-                *data->seekRequested = false;
-                *readPos = *data->newReadPos;
-                
-            }
-            
             *out++ = data->firstChannel[*readPos]; /* left channel */
             *out++ = data->secondChannel[*readPos]; /* right channel */
             
@@ -195,14 +187,16 @@ void AudioPlayer::jumpTo(int value)
         
         int64_t time = value/1000. * getDuration() * audio->audioStream->time_base.den / audio->audioStream->time_base.num;
         
-        
-        
+        Pa_AbortStream(stream);
+
         audio->playedSamples = value/1000. * audio->totalSamples;
         av_seek_frame(audio->formatContext, audio->audioStreamIndex, time, AVSEEK_FLAG_BACKWARD);
 
-        audio->newReadPos = audio->writePos;
+        audio->readPos = audio->writePos;
         audio->fillBuffer();
-        audio->seekRequested = true;
+        
+        Pa_Sleep(100);
+        Pa_StartStream(stream);
 
     }
 }

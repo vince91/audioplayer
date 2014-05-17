@@ -13,12 +13,13 @@
 #include "audiofile.h"
 #include "waveform.h"
 #include "mainwindow.h"
+#include <QDir>
 
 #define SHORT_MAX 32768.
 #define THREAD_STOP_REQUESTED -2
 
 
-AudioFile::AudioFile(MainWindow* _window, std::string _filename, std::string _tempFolder) :  window(_window), filename(_filename), tempFolder(_tempFolder)
+AudioFile::AudioFile(MainWindow* _window, std::string _filename) :  window(_window), filename(_filename)
 {
     av_register_all();
 }
@@ -63,7 +64,7 @@ bool AudioFile::initialize()
     
     
     /* dump file info to stderr */
-    //av_dump_format(formatContext, 0, filename.c_str(), 0);
+    av_dump_format(formatContext, 0, filename.c_str(), 0);
     
     waveformThread = new std::thread(&AudioFile::createWaveform, this);
     
@@ -142,16 +143,33 @@ int AudioFile::decodePacket()
     if (gotFrame) {
         
         for (int i = 0; i < frame->nb_samples; ++i) {
+            
             if(sampleFormat == AV_SAMPLE_FMT_S16P) {
                 firstChannel[writePos] = (short) (frame->extended_data[0][2 * i] | frame->extended_data[0][2 * i + 1] << 8) / SHORT_MAX;
                 
                 if (stereo)
                     secondChannel[writePos] = (short) (frame->extended_data[1][2 * i] | frame->extended_data[1][2 * i + 1] << 8) / SHORT_MAX;
                 
-                if(++writePos == 3*BUFFER_SIZE)
-                    writePos = 0;
+
                 
             }
+            else if (sampleFormat == AV_SAMPLE_FMT_S16) {
+                firstChannel[writePos] = (short) (frame->extended_data[0][4 * i] | frame->extended_data[0][4 * i + 1] << 8) / SHORT_MAX;
+                
+                if (stereo)
+                    secondChannel[writePos] = (short) (frame->extended_data[0][4 * i + 2] | frame->extended_data[0][4 * i + 3] << 8) / SHORT_MAX;
+                
+
+
+                
+                
+                
+            }
+            
+            if(++writePos == 3*BUFFER_SIZE)
+                writePos = 0;
+
+            // av_samples_fill_array
             
         }
         
@@ -201,7 +219,10 @@ void AudioFile::threadFillBuffer()
     /* constantly fill circular buffer so portaudio has always enough data to process */
     while (lastIndex != THREAD_STOP_REQUESTED) {
         
-
+        if (seekRequested) {
+            
+        }
+        else {
             if (writePos > readPos) {
                 if ((writePos - readPos - 1) < BUFFER_SIZE)
                     fillBuffer();
@@ -210,6 +231,7 @@ void AudioFile::threadFillBuffer()
                 if ((writePos + 3*BUFFER_SIZE - readPos) < BUFFER_SIZE)
                     fillBuffer();
             }
+        }
         
         window->updateTime(playedSamples/44100.);
         Pa_Sleep(10);
@@ -243,7 +265,7 @@ void AudioFile::saveAlbumCover()
 {
     /* save album cover to temp folder */
     videoStreamIndex = av_find_best_stream(formatContext, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
-    std::string file = tempFolder + "/audio_player_cover";
+    std::string file = QDir::tempPath().toStdString() + "/audio_player_cover";
     
     if (videoStreamIndex >= 0) {
         videoStream = formatContext->streams[videoStreamIndex];
@@ -423,5 +445,11 @@ void AudioFile::jumpTo(int16_t time)
     if (av_seek_frame(formatContext, audioStreamIndex, time, AVSEEK_FLAG_BACKWARD) < 0) {
         std::cerr << "ffmpeg: Could not seek frame\n";
     }
+}
+
+const std::vector<float> &AudioFile::getWaveform(int size) const
+{
+    waveform->resize(size);
+    return waveform->getResizedWaveform();
 }
 

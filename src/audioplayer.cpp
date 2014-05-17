@@ -12,11 +12,11 @@
 #include "waveform.h"
 #include <portaudio.h>
 #include <thread>
-
+#include <QDir>
 
 static paData playerData;
 
-AudioPlayer::AudioPlayer(MainWindow *_window, std::string _tempFolder) : window(_window), tempFolder(_tempFolder)
+AudioPlayer::AudioPlayer(MainWindow *_window) : window(_window)
 {
     PaError err = Pa_Initialize();
     if (err != paNoError) {
@@ -25,61 +25,48 @@ AudioPlayer::AudioPlayer(MainWindow *_window, std::string _tempFolder) : window(
     }
     
     /* Open an audio I/O stream. */
-    err = Pa_OpenDefaultStream( &stream,
-                               0,          /* no input channels */
-                               2,          /* stereo output */
-                               paFloat32,  /* 32 bit floating point output */
-                               44100,
-                               256,        /* frames per buffer, i.e. the number
-                                            of sample frames that PortAudio will
-                                            request from the callback. Many apps
-                                            may want to use
-                                            paFramesPerBufferUnspecified, which
-                                            tells PortAudio to pick the best,
-                                            possibly changing, buffer size.*/
-                               patestCallback, /* this is your callback function */
-                               &playerData ); /*This is a pointer that will be passed to
-                                               your callback*/
+    err = Pa_OpenDefaultStream(&stream, 0, 2, paFloat32, 44100, 256, patestCallback, &playerData );
     
     playerData.player = this;
 }
 
-bool AudioPlayer::loadAndPlay(std::string filename)
+bool AudioPlayer::play(AudioFile *_audio)
 {
-    audio = new AudioFile(window, filename, tempFolder);
+    audio = _audio;
     
-    if (!audio->initialize()) {
-        std::cerr << "Could not load " << filename << std::endl;
-        return false;
+    if (audio != nullptr) {
+        
+        if (!audio->initialize()) {
+            std::cerr << "Could not load " << audio->getFilename() << std::endl;
+            return false;
+        }
+        
+        playing = true;
+
+        window->updateMetadata(audio->title, audio->artist, audio->album, audio->year, audio->genre, audio->duration);
+        
+        playerData.firstChannel = audio->firstChannel;
+        playerData.secondChannel = audio->secondChannel;
+        playerData.readPos = &audio->readPos;
+        playerData.lastIndex = &audio->lastIndex;
+        playerData.playedSamples = &audio->playedSamples;
+        playerData.seekRequested = &audio->seekRequested;
+        playerData.newReadPos = &audio->newReadPos;
+        
+        Pa_StopStream(stream);
+        PaError err = Pa_StartStream(stream);
+        if (err != paNoError) {
+            std::cerr << "PortAudio error: " << Pa_GetErrorText( err ) << std::endl;
+            return false;
+        }
+        
+        bufferThread = new std::thread(&AudioFile::threadFillBuffer, audio);
+        
+        emit window->updateInterface();
+        
+        return true;
     }
-    
-    window->updateMetadata(audio->title, audio->artist, audio->album, audio->year, audio->genre, audio->duration);
-    
-    playerData.firstChannel = audio->firstChannel;
-    playerData.secondChannel = audio->secondChannel;
-    playerData.readPos = &audio->readPos;
-    playerData.lastIndex = &audio->lastIndex;
-    playerData.playedSamples = &audio->playedSamples;
-    playerData.seekRequested = &audio->seekRequested;
-    playerData.newReadPos = &audio->newReadPos;
-    
-    
-    Pa_StopStream(stream);
-    
-    PaError err;
-    err = Pa_StartStream(stream);
-    
-    bufferThread = new std::thread(&AudioFile::threadFillBuffer, audio);
-    
-    if (err != paNoError) {
-        std::cerr << "PortAudio error: " << Pa_GetErrorText( err ) << std::endl;
-        return false;
-    }
-    
-    playing = true;
-    window->updateButton();
-    
-    return true;
+    return false;
 }
 
 void AudioPlayer::pause()
@@ -95,22 +82,19 @@ void AudioPlayer::pause()
         paused = true;
     }
     
-    window->updateButton();
+    emit window->updateInterface();
 }
 
 void AudioPlayer::stop(bool callback) {
     
     playing = false; paused = false;
     
-    emit window->mainThreadSignal();
-    window->updateButton();
+    emit window->updateInterface();
     
-    //std::cout << "read samples:" << audio->playedSamples << std::endl;
-
     if (audio == nullptr)
         return;
     
-    if(!callback)
+    if (!callback)
         Pa_StopStream(stream);
     
     audio->stopThread();
@@ -122,14 +106,9 @@ void AudioPlayer::stop(bool callback) {
         }
     }
     
-    delete audio; audio = nullptr;
+    audio = nullptr;
 }
 
-void AudioPlayer::addToPlaylist(std::string filename)
-{
-    std::cerr << "Adding " << filename << " to playlist\n";
-    AudioPlayer::playlist.push_back(filename);
-}
 
 int AudioPlayer::patestCallback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo* timeInfo, PaStreamCallbackFlags statusFlags, void *userData)
 {
@@ -184,20 +163,23 @@ void AudioPlayer::jumpTo(int value)
 {
     if (playing) {
         
+        //audio->seekRequested = true;
         
         int64_t time = value/1000. * getDuration() * audio->audioStream->time_base.den / audio->audioStream->time_base.num;
         
+        audio->seekTime = time;
+        
         Pa_AbortStream(stream);
-
+        
         audio->playedSamples = value/1000. * audio->totalSamples;
         av_seek_frame(audio->formatContext, audio->audioStreamIndex, time, AVSEEK_FLAG_BACKWARD);
-
-        audio->readPos = audio->writePos;
+        
+        audio->readPos = audio->writePos + 1;
         audio->fillBuffer();
         
-        Pa_Sleep(100);
+        //Pa_Sleep(1000);
         Pa_StartStream(stream);
-
+        
     }
 }
 

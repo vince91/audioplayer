@@ -8,6 +8,7 @@
 
 #include "mainwindow.h"
 #include "waveform.h"
+#include "audiofile.h"
 #include <QWidget>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -18,11 +19,11 @@
 #include <QCloseEvent>
 
 
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), player(this, QDir::tempPath().toStdString())
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), player(this)
 {
     setWindowTitle("Audio Player");
     
-    connect(this, SIGNAL(mainThreadSignal()), this, SLOT(updateGUI()));
+    connect(this, SIGNAL(updateInterface()), this, SLOT(updateGUI()));
     
     QWidget *centralWidget = new QWidget;
     QVBoxLayout *mainLayout = new QVBoxLayout;
@@ -128,8 +129,11 @@ void MainWindow::playPause()
 {
     if (player.isPlaying())
         player.pause();
-    else
-        player.loadAndPlay("/Users/vincent/Music/nightwalker.mp3");
+    else {
+        std::string filename = "/Users/vincent/Music/AVRIL HOUSE/02-simian_mobile_disco-snake_bile_wine_(trevino_remix_1)-wws.mp3";
+        audio = new AudioFile(this, filename);
+        player.play(audio);
+    }
 }
 
 void MainWindow::stop()
@@ -140,17 +144,7 @@ void MainWindow::stop()
 
 void MainWindow::updateButton()
 {
-    if (player.isPlaying()) {
-        if (player.isPaused()) {
-            playPauseButton->setText("Resume");
-        }
-        else {
-            playPauseButton->setText("Pause");
-        }
-    }
-    else {
-        playPauseButton->setText("Play");
-    }
+
     
 }
 
@@ -197,10 +191,8 @@ void MainWindow::drawWaveform()
     int newSize = waveformView->width();//- margin;
     int sceneHeight = waveformHeight - margin;
     
-    
-    std::vector<float> waveform = player.getWaveform(newSize);
-    
-    
+    const std::vector<float> &waveform = audio->getWaveform(newSize);
+
     if (waveform.size() > 0) {
         
         QPen topPen;
@@ -230,8 +222,6 @@ void MainWindow::drawWaveform()
             
         }
     }
-    
-    //Waveform::test();
 }
 
 
@@ -243,7 +233,6 @@ void MainWindow::sliderPress()
 void MainWindow::sliderRelease()
 {
     sliderPressed = false;
-    std::cout << slider->value() << std::endl;
     player.jumpTo(slider->value());
 }
 
@@ -265,7 +254,16 @@ void MainWindow::updateTime(float time)
 
 void MainWindow::updateGUI()
 {
-    if (!player.isPlaying()) {
+    if (player.isPlaying()) {
+        if (player.isPaused()) {
+            playPauseButton->setText("Resume");
+        }
+        else {
+            playPauseButton->setText("Pause");
+        }
+    }
+    else {
+        playPauseButton->setText("Play");
         waveformScene->clear();
         elapsedTime->setText("00:00/00:00");
     }

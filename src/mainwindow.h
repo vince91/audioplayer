@@ -50,6 +50,7 @@ private:
     AudioPlayer player;
     
     bool sliderPressed = false;
+    AudioFile *audio;
     
     static const int waveformHeight = 150;
     static const int margin = 10;
@@ -68,7 +69,7 @@ protected:
     void closeEvent(QCloseEvent *event);
     
 signals:
-    void mainThreadSignal();
+    void updateInterface();
 
     
 };

@@ -12,6 +12,7 @@
 #define BUFFER_SIZE 10000
 
 #include <iostream>
+#include <vector>
 
 extern "C" {
 #include <libavformat/avformat.h>
@@ -26,13 +27,16 @@ class AudioFile
     friend class AudioPlayer;
     
 public:
-    AudioFile(MainWindow*, std::string, std::string);
+    AudioFile(MainWindow*, std::string);
     ~AudioFile();
     
     bool initialize();
     void stopThread() { lastIndex = -2; }
     
     void threadFillBuffer();
+    const std::vector<float> & getWaveform(int) const;
+    
+    std::string getFilename() { return filename; }
 
     
 private:
@@ -71,7 +75,7 @@ private:
     AVPacket waveformPacket;
     int waveformGotFrame;
     
-    std::string artist, title, album, genre, year, duration, tempFolder;
+    std::string artist, title, album, genre, year, duration;
     
     Waveform *waveform;
     float *waveformBuffer; unsigned int wfReadPos = 0, wfWritePos = 0, samplesPerChunk, waveformBufferSize;

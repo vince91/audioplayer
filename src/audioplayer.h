@@ -21,10 +21,9 @@ class MainWindow;
 class AudioPlayer
 {
 public:
-    AudioPlayer(MainWindow *, std::string);
-    void addToPlaylist(std::string);
+    AudioPlayer(MainWindow *);
     
-    bool loadAndPlay(std::string);
+    bool play(AudioFile*);
     void pause();
     void stop(bool);
     void jumpTo(float);
@@ -49,6 +48,7 @@ private:
     AudioFile *audio = nullptr;
     
     static int patestCallback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo* timeInfo, PaStreamCallbackFlags statusFlags, void *userData );
+    
 
     
 };
